@@ -1,7 +1,7 @@
 use std::mem;
 use std::borrow::{Cow, ToOwned};
 use std::ops::{Range, RangeInclusive};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::hash::{BuildHasher, Hash};
 use core::mem::MaybeUninit;
 
@@ -67,6 +67,22 @@ impl< 'a, C, T, S > Readable< 'a, C > for HashSet< T, S >
     where C: Context,
           T: Readable< 'a, C > + Eq + Hash,
           S: BuildHasher + Default
+{
+    #[inline]
+    fn read_from< R: Reader< 'a, C > >( reader: &mut R ) -> Result< Self, C::Error > {
+        let length = crate::private::read_length( reader )?;
+        reader.read_collection( length )
+    }
+
+    #[inline]
+    fn minimum_bytes_needed() -> usize {
+        4
+    }
+}
+
+impl< 'a, C, T > Readable< 'a, C > for VecDeque< T >
+    where C: Context,
+          T: Readable< 'a, C > + Ord
 {
     #[inline]
     fn read_from< R: Reader< 'a, C > >( reader: &mut R ) -> Result< Self, C::Error > {

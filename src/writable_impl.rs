@@ -1,7 +1,7 @@
 use std::mem;
 use std::borrow::{Cow, ToOwned};
 use std::ops::{Range, RangeInclusive};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 
 use crate::endianness::Endianness;
@@ -84,6 +84,29 @@ impl< C, K, V, S > Writable< C > for HashMap< K, V, S >
 }
 
 impl< C, T, S > Writable< C > for HashSet< T, S >
+    where C: Context,
+          T: Writable< C >
+{
+    #[inline]
+    fn write_to< W: ?Sized + Writer< C > >( &self, writer: &mut W ) -> Result< (), C::Error > {
+        write_length( self.len(), writer )?;
+        writer.write_collection( self.iter() )
+    }
+
+    #[inline]
+    fn bytes_needed( &self ) -> Result< usize, C::Error > {
+        unsafe_is_length!( self.len() );
+
+        let mut count = mem::size_of::< u32 >();
+        for value in self {
+            count += value.bytes_needed()?;
+        }
+
+        Ok( count )
+    }
+}
+
+impl< C, T > Writable< C > for VecDeque< T >
     where C: Context,
           T: Writable< C >
 {

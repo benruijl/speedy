@@ -168,7 +168,7 @@ fn is_guaranteed_non_recursive( ty: &syn::Type ) -> bool {
             let segment = &segments[ 0 ];
             let ident = segment.ident.to_string();
             match ident.as_str() {
-                "String" | "Vec" | "BTreeSet" | "BTreeMap" | "HashSet" | "HashMap" |
+                "String" | "Vec" | "BTreeSet" | "VecDeque" | "BTreeMap" | "HashSet" | "HashMap" |
                 "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "usize" | "isize" |
                 "str" => {},
                 _ => return false
@@ -795,6 +795,7 @@ impl< 'a > Field< 'a > {
             | Ty::Vec( inner_ty )
             | Ty::HashSet( inner_ty )
             | Ty::BTreeSet( inner_ty )
+            | Ty::VecDeque( inner_ty )
             | Ty::CowHashSet( _, inner_ty )
             | Ty::CowBTreeSet( _, inner_ty )
             | Ty::CowSlice( _, inner_ty )
@@ -982,6 +983,7 @@ enum Ty {
     HashSet( syn::Type ),
     BTreeMap( syn::Type, syn::Type ),
     BTreeSet( syn::Type ),
+    VecDeque( syn::Type ),
 
     CowHashMap( syn::Lifetime, syn::Type, syn::Type ),
     CowHashSet( syn::Lifetime, syn::Type ),
@@ -1109,6 +1111,8 @@ fn parse_special_ty( ty: &syn::Type ) -> Option< Ty > {
                         Some( Ty::HashSet( extract_inner_ty( args )?.clone() ) )
                     } else if name == "BTreeSet" {
                         Some( Ty::BTreeSet( extract_inner_ty( args )?.clone() ) )
+                    } else if name == "VecDeque" {
+                        Some( Ty::VecDeque( extract_inner_ty( args )?.clone() ) )
                     } else if name == "Cow" {
                         let (lifetime, ty) = extract_lifetime_and_inner_ty( args )?;
                         if let Some( inner_ty ) = extract_slice_inner_ty( ty ) {
@@ -1285,6 +1289,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                     | Opt::Plain( Ty::HashSet( .. ) )
                     | Opt::Plain( Ty::BTreeMap( .. ) )
                     | Opt::Plain( Ty::BTreeSet( .. ) )
+                    | Opt::Plain( Ty::VecDeque( .. ) )
                     | Opt::Plain( Ty::CowHashMap( .. ) )
                     | Opt::Plain( Ty::CowHashSet( .. ) )
                     | Opt::Plain( Ty::CowBTreeMap( .. ) )
@@ -1302,6 +1307,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                     | Opt::Option( Ty::HashSet( .. ) )
                     | Opt::Option( Ty::BTreeMap( .. ) )
                     | Opt::Option( Ty::BTreeSet( .. ) )
+                    | Opt::Option( Ty::VecDeque( .. ) )
                     | Opt::Option( Ty::CowHashMap( .. ) )
                     | Opt::Option( Ty::CowHashSet( .. ) )
                     | Opt::Option( Ty::CowBTreeMap( .. ) )
@@ -1319,7 +1325,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                         return Err(
                             syn::Error::new(
                                 field.ty.span(),
-                                "The 'length' attribute is only supported for `Vec`, `String`, `Cow<[_]>`, `Cow<str>`, `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, `Cow<HashMap>`, `Cow<HashSet>`, `Cow<BTreeMap>`, `Cow<BTreeSet>`, `&[u8]`, `&str`"
+                                "The 'length' attribute is only supported for `Vec`, `String`, `Cow<[_]>`, `Cow<str>`, `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, `VecDeque`, `Cow<HashMap>`, `Cow<HashSet>`, `Cow<BTreeMap>`, `Cow<BTreeSet>`, `&[u8]`, `&str`"
                             )
                         );
                     }
@@ -1336,6 +1342,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                     | Opt::Plain( Ty::HashSet( .. ) )
                     | Opt::Plain( Ty::BTreeMap( .. ) )
                     | Opt::Plain( Ty::BTreeSet( .. ) )
+                    | Opt::Plain( Ty::VecDeque( .. ) )
                     | Opt::Plain( Ty::CowHashMap( .. ) )
                     | Opt::Plain( Ty::CowHashSet( .. ) )
                     | Opt::Plain( Ty::CowBTreeMap( .. ) )
@@ -1351,6 +1358,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                     | Opt::Option( Ty::HashSet( .. ) )
                     | Opt::Option( Ty::BTreeMap( .. ) )
                     | Opt::Option( Ty::BTreeSet( .. ) )
+                    | Opt::Option( Ty::VecDeque( .. ) )
                     | Opt::Option( Ty::CowHashMap( .. ) )
                     | Opt::Option( Ty::CowHashSet( .. ) )
                     | Opt::Option( Ty::CowBTreeMap( .. ) )
@@ -1370,7 +1378,7 @@ fn get_fields< 'a, I: IntoIterator< Item = &'a syn::Field > + 'a >( fields: I ) 
                         return Err(
                             syn::Error::new(
                                 field.ty.span(),
-                                "The 'length_type' attribute is only supported for `Vec`, `String`, `Cow<[_]>`, `Cow<str>`, `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, `Cow<HashMap>`, `Cow<HashSet>`, `Cow<BTreeMap>`, `Cow<BTreeSet>`, `&[u8]`, `&str` and for `Option<T>` where `T` is one of these types"
+                                "The 'length_type' attribute is only supported for `Vec`, `String`, `Cow<[_]>`, `Cow<str>`, `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, `VecDeque`, `Cow<HashMap>`, `Cow<HashSet>`, `Cow<BTreeMap>`, `Cow<BTreeSet>`, `&[u8]`, `&str` and for `Option<T>` where `T` is one of these types"
                             )
                         );
                     }
@@ -1650,6 +1658,7 @@ fn read_field_body( field: &Field ) -> TokenStream {
         Ty::BTreeMap( .. )  => read_key_value_collection(),
         Ty::HashSet( .. ) |
         Ty::BTreeSet( .. ) => read_collection(),
+        Ty::VecDeque( .. ) => read_collection(),
         Ty::CowHashMap( .. ) |
         Ty::CowBTreeMap( .. ) => read_cow_key_value_collection(),
         Ty::CowHashSet( .. ) |
@@ -1793,6 +1802,7 @@ fn write_field_body( field: &Field ) -> TokenStream {
         Ty::HashSet( .. ) |
         Ty::BTreeMap( .. ) |
         Ty::BTreeSet( .. ) |
+        Ty::VecDeque( .. ) |
         Ty::CowHashMap( .. ) |
         Ty::CowHashSet( .. ) |
         Ty::CowBTreeMap( .. ) |
@@ -1996,6 +2006,7 @@ fn get_minimum_bytes( field: &Field ) -> Option< TokenStream > {
                     | Ty::HashSet( .. )
                     | Ty::BTreeMap( .. )
                     | Ty::BTreeSet( .. )
+                    | Ty::VecDeque( .. )
                     | Ty::CowHashMap( .. )
                     | Ty::CowHashSet( .. )
                     | Ty::CowBTreeMap( .. )
